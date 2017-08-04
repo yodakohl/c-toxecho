@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <string>
 #include <unistd.h>
 
 #include <sodium/utils.h>
@@ -33,13 +33,13 @@ Tox *create_tox()
         long fsize = ftell(f);
         fseek(f, 0, SEEK_SET);
 
-        char *savedata = malloc(fsize);
+        char *savedata = (char*) malloc(fsize);
 
         fread(savedata, fsize, 1, f);
         fclose(f);
 
         options.savedata_type = TOX_SAVEDATA_TYPE_TOX_SAVE;
-        options.savedata_data = savedata;
+        options.savedata_data = (const uint8_t*) savedata;
         options.savedata_length = fsize;
 
         tox = tox_new(&options, NULL);
@@ -55,8 +55,8 @@ Tox *create_tox()
 void update_savedata_file(const Tox *tox)
 {
     size_t size = tox_get_savedata_size(tox);
-    char *savedata = malloc(size);
-    tox_get_savedata(tox, savedata);
+    char *savedata = (char*) malloc(size);
+    tox_get_savedata(tox, (uint8_t*) savedata);
 
     FILE *f = fopen(savedata_tmp_filename, "wb");
     fwrite(savedata, size, 1, f);
@@ -136,11 +136,11 @@ int main()
 {
     Tox *tox = create_tox();
 
-    const char *name = "Echo Bot";
-    tox_self_set_name(tox, name, strlen(name), NULL);
+    std::string name = "Echo Bot";
+    tox_self_set_name(tox, (const uint8_t*) name.c_str(), strlen(name.c_str()), NULL);
 
-    const char *status_message = "Echoing your messages";
-    tox_self_set_status_message(tox, status_message, strlen(status_message), NULL);
+    std::string status_message = "Echoing your messages";
+    tox_self_set_status_message(tox, (const uint8_t*) status_message.c_str(), strlen(status_message.c_str()), NULL);
 
     bootstrap(tox);
 
