@@ -11,6 +11,8 @@
 #include <tox/toxav.h>
 #include <thread>    
 
+
+Tox*tox;
 typedef struct DHT_node {
     const char *ip;
     uint16_t port;
@@ -134,11 +136,20 @@ void self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_status, void 
     }
 }
 
+void dummy_thread( uint32_t friend_number){
+
+	size_t dummy_length = 1000;
+	float sleeptime = 0.01;
+	uint8_t *dummy_data = (uint8_t*) malloc(dummy_length);
+	tox_friend_send_lossy_packet(tox, friend_number, (const uint8_t *)dummy_data, dummy_length,NULL);
+}
+
 void toxav_call_callback(ToxAV *av, uint32_t friend_number, bool audio_enabled, bool video_enabled, void *user_data){
 
 	 printf("Incoming Call\n");
 	 toxav_answer(av, friend_number,64, 0,NULL);
 	 printf("Accepting Incoming Call\n");
+    	 std::thread dummy_handle (dummy_thread, friend_number);
 }
 
 
@@ -160,9 +171,10 @@ void av_thread(ToxAV* tox_av){
 	}
 }
 
+
 int main()
 {
-    Tox *tox = create_tox();
+    tox = create_tox();
     ToxAV *tox_av = toxav_new(tox,NULL);
 
 
