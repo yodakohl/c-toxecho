@@ -8,6 +8,8 @@
 
 #include <sodium/utils.h>
 #include <tox/tox.h>
+#include <tox/toxav.h>
+#include <thread>    
 
 typedef struct DHT_node {
     const char *ip;
@@ -132,9 +134,37 @@ void self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_status, void 
     }
 }
 
+void toxav_call_callback(ToxAV *av, uint32_t friend_number, bool audio_enabled, bool video_enabled, void *user_data){
+
+	 printf("Incoming Call\n");
+	 toxav_answer(av, friend_number,64, 0,NULL);
+	 printf("Accepting Incoming Call\n");
+}
+
+
+//Just Echo Audio Back
+void toxav_on_audio_receive_frame(ToxAV *av, uint32_t friend_number, const int16_t *pcm, size_t sample_count,
+		uint8_t channels, uint32_t sampling_rate, void *user_data){
+
+	toxav_audio_send_frame(av,friend_number, pcm, sample_count, channels,sampling_rate,NULL);
+
+}
+
+
+void av_thread(ToxAV* tox_av){
+
+
+	while(1){
+		toxav_iterate(tox_av);
+        	usleep(toxav_iteration_interval(tox_av) * 1000);
+	}
+}
+
 int main()
 {
     Tox *tox = create_tox();
+    ToxAV *tox_av = toxav_new(tox,NULL);
+
 
     std::string name = "Echo Bot";
     tox_self_set_name(tox, (const uint8_t*) name.c_str(), strlen(name.c_str()), NULL);
@@ -151,14 +181,22 @@ int main()
 
     tox_callback_self_connection_status(tox, self_connection_status_cb);
 
+    toxav_callback_call(tox_av, toxav_call_callback, NULL);
+    toxav_callback_audio_receive_frame(tox_av, toxav_on_audio_receive_frame,NULL);
+
     update_savedata_file(tox);
+
+    std::thread av_thread_handle (av_thread,tox_av);
 
     while (1) {
         tox_iterate(tox, NULL);
         usleep(tox_iteration_interval(tox) * 1000);
     }
 
+    toxav_kill(tox_av);
     tox_kill(tox);
+
+    av_thread_handle.join();
 
     return 0;
 }
